@@ -1,4 +1,4 @@
-# script/example/main.py
+# script/BanWords2/main.py
 
 import logging
 import os
@@ -13,26 +13,26 @@ from app.config import owner_id
 from app.api import *
 from app.switch import load_switch, save_switch
 
-# 数据存储路径，实际开发时，请将Example替换为具体的数据存放路径
+# 数据存储路径，实际开发时，请将BanWords2替换为具体的数据存放路径
 DATA_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
     "data",
-    "Example",
+    "BanWords2",
 )
 
 
 # 查看功能开关状态
 def load_function_status(group_id):
-    return load_switch(group_id, "example")
+    return load_switch(group_id, "BanWords2")
 
 
 # 保存功能开关状态
 def save_function_status(group_id, status):
-    save_switch(group_id, "example", status)
+    save_switch(group_id, "BanWords2", status)
 
 
 # 群消息处理函数
-async def handle_Example_group_message(websocket, msg):
+async def handle_BanWords2_group_message(websocket, msg):
     # 确保数据目录存在
     os.makedirs(DATA_DIR, exist_ok=True)
     try:
@@ -43,12 +43,12 @@ async def handle_Example_group_message(websocket, msg):
         message_id = str(msg.get("message_id"))
 
     except Exception as e:
-        logging.error(f"处理Example群消息失败: {e}")
+        logging.error(f"处理BanWords2群消息失败: {e}")
         return
 
 
 # 群通知处理函数
-async def handle_Example_group_notice(websocket, msg):
+async def handle_BanWords2_group_notice(websocket, msg):
     # 确保数据目录存在
     os.makedirs(DATA_DIR, exist_ok=True)
     try:
@@ -59,5 +59,5 @@ async def handle_Example_group_notice(websocket, msg):
         message_id = str(msg.get("message_id"))
 
     except Exception as e:
-        logging.error(f"处理Example群通知失败: {e}")
+        logging.error(f"处理BanWords2群通知失败: {e}")
         return
