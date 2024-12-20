@@ -209,13 +209,36 @@ async def manager_command(websocket, raw_message, group_id, message_id):
                 )
                 return
 
+        # 查看默认违禁词列表
+        match = re.match("bw2defaultlist", raw_message)
+        if match:
+            default_ban_words = get_banword_list()
+            await send_group_msg(
+                websocket,
+                group_id,
+                f"[CQ:reply,id={message_id}]" + f"默认违禁词列表: {default_ban_words}",
+            )
+            return
+
+        # 查看分群违禁词列表
+        match = re.match("bw2list", raw_message)
+        if match:
+            ban_words = get_banword_list(group_id)
+            await send_group_msg(
+                websocket,
+                group_id,
+                f"[CQ:reply,id={message_id}]" + f"分群违禁词列表: {ban_words}",
+            )
+            return
+
         # 未识别命令错误提示
         match = re.match("bw2(.*)", raw_message)
         if match:
             await send_group_msg(
                 websocket,
                 group_id,
-                f"[CQ:reply,id={message_id}]未识别命令: {raw_message}",
+                f"[CQ:reply,id={message_id}]未识别命令: {raw_message}"
+                + f"\n\nbw2add违禁词 权值\nbw2del违禁词\nbw2defaultadd违禁词 权值\nbw2defaultdel违禁词\nbw2list\nbw2defaultlist",
             )
             return
 
@@ -244,7 +267,7 @@ def get_banword_list(group_id: str = None) -> dict:
         json_file = os.path.join(
             DATA_DIR, f"{group_id}.json" if group_id else "default.json"
         )
-        with open(json_file, "r") as f:
+        with open(json_file, "r", encoding="utf-8") as f:
             ban_words = json.load(f)
         return ban_words
     except Exception as e:
