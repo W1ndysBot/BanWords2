@@ -5,13 +5,14 @@ import os
 import sys
 import json
 import re
+import asyncio
 
 # 添加项目根目录到sys.path
 sys.path.append(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from app.config import owner_id
+from app.config import *
 from app.api import *
 from app.switch import load_switch, save_switch
 
@@ -284,12 +285,23 @@ async def check_banword(websocket, raw_message, group_id, message_id, user_id):
         user_id (str): 用户ID
     """
     total_weight = calculate_message_weight(raw_message, group_id)
-    if total_weight > 0:
+    # 若权值大于10则发送警告
+    if total_weight > 10:
+        # 禁言30天
+        await set_group_ban(websocket, group_id, user_id, 60 * 60 * 24 * 30)
         await send_group_msg(
             websocket,
             group_id,
-            f"[CQ:reply,id={message_id}]用户【{user_id}】发送的消息包含违禁词，总权值: {total_weight}",
+            f"[CQ:reply,id={message_id}]用户【{user_id}】发送的消息包含违禁词，总权值: {total_weight}超过阈值",
         )
+
+        report_message = f"群号【{group_id}】 用户【{user_id}】发送的消息包含违禁词，总权值: {total_weight}超过阈值\n"
+        report_message += f"原消息详情下条消息"
+
+        # 上报到上报群
+        await send_group_msg(websocket, report_group_id, report_message)
+        await asyncio.sleep(0.1)
+        await send_group_msg(websocket, group_id, raw_message)
 
 
 # 群消息处理函数
