@@ -34,9 +34,9 @@ def save_function_status(group_id, status):
 
 
 # 初始化
-def init_BanWords2():
+def init_BanWords2(group_id=None):
     os.makedirs(DATA_DIR, exist_ok=True)
-    init_group_BanWords2_json(owner_id)
+    init_group_BanWords2_json(group_id)
     init_default_BanWords2_json()
 
 
