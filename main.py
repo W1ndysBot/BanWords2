@@ -317,7 +317,7 @@ async def handle_BanWords2_group_message(websocket, msg):
         message_id = str(msg.get("message_id"))
 
         # 初始化
-        init_BanWords2()
+        init_BanWords2(group_id)
 
         # 鉴权
         authorized = is_authorized(role, user_id)
