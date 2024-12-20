@@ -270,16 +270,24 @@ async def manager_command(websocket, raw_message, group_id, message_id):
                 [f"{word}: {weight}" for word, weight in default_ban_words.items()]
             )
             base64_default_ban_words_list = draw_text(default_ban_words_list)
-            # 拼接完整base64图片
-            base64_default_ban_words_list = (
-                f"[CQ:image,file=base64://{base64_default_ban_words_list}]"
-            )
-            await send_group_msg(
-                websocket,
-                group_id,
-                f"[CQ:reply,id={message_id}]"
-                + f"默认违禁词列表:\n{base64_default_ban_words_list}",
-            )
+            if base64_default_ban_words_list:
+                # 拼接完整base64图片
+                base64_default_ban_words_list = (
+                    f"[CQ:image,file=base64://{base64_default_ban_words_list}]"
+                )
+                await send_group_msg(
+                    websocket,
+                    group_id,
+                    f"[CQ:reply,id={message_id}]"
+                    + f"默认违禁词列表:\n{base64_default_ban_words_list}",
+                )
+            else:
+                await send_group_msg(
+                    websocket,
+                    group_id,
+                    f"[CQ:reply,id={message_id}]"
+                    + f"默认违禁词列表:\n{default_ban_words_list}",
+                )
             return
 
         # 查看分群违禁词列表
@@ -290,14 +298,24 @@ async def manager_command(websocket, raw_message, group_id, message_id):
                 [f"{word}: {weight}" for word, weight in ban_words.items()]
             )
             base64_ban_words_list = draw_text(ban_words_list)
-            # 拼接完整base64图片
-            base64_ban_words_list = f"[CQ:image,file=base64://{base64_ban_words_list}]"
-            await send_group_msg(
-                websocket,
-                group_id,
-                f"[CQ:reply,id={message_id}]"
-                + f"分群违禁词列表:\n{base64_ban_words_list}",
-            )
+            if base64_ban_words_list:
+                # 拼接完整base64图片
+                base64_ban_words_list = (
+                    f"[CQ:image,file=base64://{base64_ban_words_list}]"
+                )
+                await send_group_msg(
+                    websocket,
+                    group_id,
+                    f"[CQ:reply,id={message_id}]"
+                    + f"分群违禁词列表:\n{base64_ban_words_list}",
+                )
+            else:
+                await send_group_msg(
+                    websocket,
+                    group_id,
+                    f"[CQ:reply,id={message_id}]"
+                    + f"分群违禁词列表:\n{ban_words_list}",
+                )
             return
 
         # 未识别命令错误提示
