@@ -138,8 +138,9 @@ def del_banword(word: str, group_id: str = None) -> bool:
 
 
 # 管理员命令函数
-async def manager_command(websocket, raw_message, group_id):
+async def manager_command(websocket, raw_message, group_id, message_id):
     try:
+        # 添加违禁词
         match = re.match("bw2add(.*) (\d+)", raw_message)
         if match:
             word = match.group(1)
@@ -148,15 +149,17 @@ async def manager_command(websocket, raw_message, group_id):
                 await send_group_msg(
                     websocket,
                     group_id,
-                    f"群【{group_id}】添加违禁词成功: {word}, 权值: {weight}",
+                    f"[CQ:reply,id={message_id}]群【{group_id}】添加违禁词成功: {word}, 权值: {weight}",
                 )
+                return
             else:
                 await send_group_msg(
                     websocket,
                     group_id,
-                    f"群【{group_id}】添加违禁词失败: {word}, 权值: {weight}",
+                    f"[CQ:reply,id={message_id}]群【{group_id}】添加违禁词失败: {word}, 权值: {weight}",
                 )
-
+                return
+        # 删除违禁词
         match = re.match("bw2del(.*)", raw_message)
         if match:
             word = match.group(1)
@@ -164,15 +167,17 @@ async def manager_command(websocket, raw_message, group_id):
                 await send_group_msg(
                     websocket,
                     group_id,
-                    f"群【{group_id}】删除违禁词成功: {word}",
+                    f"[CQ:reply,id={message_id}]群【{group_id}】删除违禁词成功: {word}",
                 )
+                return
             else:
                 await send_group_msg(
                     websocket,
                     group_id,
-                    f"群【{group_id}】删除违禁词失败: {word}",
+                    f"[CQ:reply,id={message_id}]群【{group_id}】删除违禁词失败: {word}",
                 )
-
+                return
+        # 添加默认违禁词
         match = re.match("bw2defaultadd(.*) (\d+)", raw_message)
         if match:
             word = match.group(1)
@@ -181,21 +186,110 @@ async def manager_command(websocket, raw_message, group_id):
                 await send_group_msg(
                     websocket,
                     group_id,
-                    f"默认违禁词添加成功: {word}, 权值: {weight}",
+                    f"[CQ:reply,id={message_id}]默认违禁词添加成功: {word}, 权值: {weight}",
                 )
+                return
             else:
                 await send_group_msg(
                     websocket,
                     group_id,
-                    f"默认违禁词添加失败: {word}, 权值: {weight}",
+                    f"[CQ:reply,id={message_id}]默认违禁词添加失败: {word}, 权值: {weight}",
                 )
+                return
+        # 删除默认违禁词
+        match = re.match("bw2defaultdel(.*)", raw_message)
+        if match:
+            word = match.group(1)
+            if del_banword(word):
+                await send_group_msg(
+                    websocket,
+                    group_id,
+                    f"[CQ:reply,id={message_id}]默认违禁词删除成功: {word}",
+                )
+                return
+
+        # 未识别命令错误提示
+        match = re.match("bw2(.*)", raw_message)
+        if match:
+            await send_group_msg(
+                websocket,
+                group_id,
+                f"[CQ:reply,id={message_id}]未识别命令: {raw_message}",
+            )
+            return
 
     except Exception as e:
         logging.error(f"处理BanWords2管理员命令失败: {e}")
         await send_group_msg(
-            websocket, group_id, "处理BanWords2管理员命令失败，错误信息：" + str(e)
+            websocket,
+            group_id,
+            f"[CQ:reply,id={message_id}]处理BanWords2管理员命令失败，错误信息：{e}",
         )
         return
+
+
+# 获取违禁词列表
+def get_banword_list(group_id: str = None) -> dict:
+    """
+    获取指定群组或默认的违禁词列表
+
+    Args:
+        group_id (str, optional): 群号。若指定则获取对应群的违禁词列表，否则获取默认违禁词列表
+
+    Returns:
+        dict: 违禁词及其权值的字典
+    """
+    try:
+        json_file = os.path.join(
+            DATA_DIR, f"{group_id}.json" if group_id else "default.json"
+        )
+        with open(json_file, "r") as f:
+            ban_words = json.load(f)
+        return ban_words
+    except Exception as e:
+        logging.error(f"获取{'群组' if group_id else '默认'}违禁词列表失败: {e}")
+        return {}
+
+
+# 计算消息总权值
+def calculate_message_weight(message: str, group_id: str = None) -> int:
+    """
+    计算消息中违禁词的总权值
+
+    Args:
+        message (str): 要检测的消息
+        group_id (str, optional): 群号。若指定则使用对应群的违禁词列表，否则使用默认违禁词列表
+
+    Returns:
+        int: 消息中违禁词的总权值
+    """
+    ban_words = get_banword_list(group_id)
+    total_weight = 0
+    for word, weight in ban_words.items():
+        if word in message:
+            total_weight += weight
+    return total_weight
+
+
+# 对群消息进行违禁词检测
+async def check_banword(websocket, raw_message, group_id, message_id, user_id):
+    """
+    检测消息中的违禁词并发送警告
+
+    Args:
+        websocket: WebSocket连接对象
+        raw_message (str): 要检测的消息
+        group_id (str): 群号
+        message_id (str): 消息ID
+        user_id (str): 用户ID
+    """
+    total_weight = calculate_message_weight(raw_message, group_id)
+    if total_weight > 0:
+        await send_group_msg(
+            websocket,
+            group_id,
+            f"[CQ:reply,id={message_id}]用户【{user_id}】发送的消息包含违禁词，总权值: {total_weight}",
+        )
 
 
 # 群消息处理函数
@@ -217,9 +311,15 @@ async def handle_BanWords2_group_message(websocket, msg):
 
         if authorized:
             # 管理员命令
-            await manager_command(websocket, raw_message, group_id)
-
+            await manager_command(websocket, raw_message, group_id, message_id)
+        else:
+            # 对群消息进行违禁词检测
+            await check_banword(websocket, raw_message, group_id, message_id, user_id)
     except Exception as e:
         logging.error(f"处理BanWords2群消息失败: {e}")
-        await send_group_msg(group_id, "处理BanWords2群消息失败，错误信息：" + str(e))
+        await send_group_msg(
+            websocket,
+            group_id,
+            f"[CQ:reply,id={message_id}]处理BanWords2群消息失败，错误信息：{e}",
+        )
         return
