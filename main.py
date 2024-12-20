@@ -213,10 +213,14 @@ async def manager_command(websocket, raw_message, group_id, message_id):
         match = re.match("bw2defaultlist", raw_message)
         if match:
             default_ban_words = get_banword_list()
+            default_ban_words_list = "\n".join(
+                [f"{word}: {weight}" for word, weight in default_ban_words.items()]
+            )
             await send_group_msg(
                 websocket,
                 group_id,
-                f"[CQ:reply,id={message_id}]" + f"默认违禁词列表: {default_ban_words}",
+                f"[CQ:reply,id={message_id}]"
+                + f"默认违禁词列表:\n{default_ban_words_list}",
             )
             return
 
@@ -224,10 +228,13 @@ async def manager_command(websocket, raw_message, group_id, message_id):
         match = re.match("bw2list", raw_message)
         if match:
             ban_words = get_banword_list(group_id)
+            ban_words_list = "\n".join(
+                [f"{word}: {weight}" for word, weight in ban_words.items()]
+            )
             await send_group_msg(
                 websocket,
                 group_id,
-                f"[CQ:reply,id={message_id}]" + f"分群违禁词列表: {ban_words}",
+                f"[CQ:reply,id={message_id}]" + f"分群违禁词列表:\n{ban_words_list}",
             )
             return
 
