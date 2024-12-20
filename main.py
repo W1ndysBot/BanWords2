@@ -82,12 +82,12 @@ def add_banword(word: str, weight: int, group_id: str = None) -> bool:
         if group_id:
             init_group_BanWords2_json(group_id)
 
-        with open(json_file, "r") as f:
+        with open(json_file, "r", encoding="utf-8") as f:
             ban_words = json.load(f)
 
         ban_words[word] = weight
 
-        with open(json_file, "w") as f:
+        with open(json_file, "w", encoding="utf-8") as f:
             json.dump(ban_words, f, ensure_ascii=False, indent=4)
 
         logging.info(
@@ -117,13 +117,13 @@ def del_banword(word: str, group_id: str = None) -> bool:
             DATA_DIR, f"{group_id}.json" if group_id else "default.json"
         )
 
-        with open(json_file, "r") as f:
+        with open(json_file, "r", encoding="utf-8") as f:
             ban_words = json.load(f)
 
         if word in ban_words:
             del ban_words[word]
 
-            with open(json_file, "w") as f:
+            with open(json_file, "w", encoding="utf-8") as f:
                 json.dump(ban_words, f, ensure_ascii=False, indent=4)
 
             logging.info(
