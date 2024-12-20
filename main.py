@@ -35,7 +35,7 @@ def save_function_status(group_id, status):
 
 
 # 初始化
-def init_BanWords2(group_id=None):
+def init_BanWords2(group_id):
     os.makedirs(DATA_DIR, exist_ok=True)
     init_group_BanWords2_json(group_id)
     init_default_BanWords2_json()
@@ -142,7 +142,7 @@ def del_banword(word: str, group_id: str = None) -> bool:
 async def manager_command(websocket, raw_message, group_id, message_id):
     try:
         # 添加违禁词
-        match = re.match("bw2add(.*) (\d+)", raw_message)
+        match = re.match(r"bw2add(.*) (\d+)", raw_message)
         if match:
             word = match.group(1)
             weight = int(match.group(2))
@@ -179,7 +179,7 @@ async def manager_command(websocket, raw_message, group_id, message_id):
                 )
                 return
         # 添加默认违禁词
-        match = re.match("bw2defaultadd(.*) (\d+)", raw_message)
+        match = re.match(r"bw2defaultadd(.*) (\d+)", raw_message)
         if match:
             word = match.group(1)
             weight = int(match.group(2))
