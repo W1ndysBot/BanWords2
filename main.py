@@ -265,8 +265,9 @@ def calculate_message_weight(message: str, group_id: str = None) -> int:
         int: 消息中违禁词的总权值
     """
     ban_words = get_banword_list(group_id)
+    default_ban_words = get_banword_list() if group_id else {}
     total_weight = 0
-    for word, weight in ban_words.items():
+    for word, weight in {**ban_words, **default_ban_words}.items():
         if word in message:
             total_weight += weight
     return total_weight
