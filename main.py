@@ -6,6 +6,9 @@ import sys
 import json
 import re
 import asyncio
+from PIL import Image, ImageDraw, ImageFont
+import base64
+from io import BytesIO
 
 # 添加项目根目录到sys.path
 sys.path.append(
@@ -15,9 +18,6 @@ sys.path.append(
 from app.config import *
 from app.api import *
 from app.switch import load_switch, save_switch
-from PIL import Image, ImageDraw, ImageFont
-import base64
-from io import BytesIO
 
 # 数据存储路径，实际开发时，请将BanWords2替换为具体的数据存放路径
 DATA_DIR = os.path.join(
@@ -61,13 +61,15 @@ def init_default_BanWords2_json():
             f.write("{}")
             logging.info(f"初始化默认违禁词JSON文件: {json_file}")
 
+
 # 画图，传入的文案画出白底黑字图片，边界自适应
-def draw_text(text: str, font_size: int = 20, font_path: str = None) -> str:
+def draw_text(text: str, font_size: int = 30, font_path: str = None) -> str:
     """
     根据传入的文本生成白底黑字的图片，并返回base64编码的图片数据
 
     Args:
         text (str): 要绘制的文本
+
         font_size (int, optional): 字体大小，默认为20
         font_path (str, optional): 字体文件路径，默认为None使用默认字体
 
@@ -75,20 +77,28 @@ def draw_text(text: str, font_size: int = 20, font_path: str = None) -> str:
         str: base64编码的图片数据
     """
     try:
-        # 使用指定字体文件或默认字体
-        font = ImageFont.truetype(font_path, font_size) if font_path else ImageFont.load_default()
+        # 使用指定字体文件或尝试使用Arial字体，若失败则使用默认字体
+        try:
+            font = (
+                ImageFont.truetype(font_path, font_size)
+                if font_path
+                else ImageFont.truetype("msyh.ttc", font_size)
+            )
+        except IOError:
+            font = ImageFont.load_default()
 
         # 计算文本尺寸
-        dummy_img = Image.new('RGB', (1, 1))
+        dummy_img = Image.new("RGB", (1, 1))
         draw = ImageDraw.Draw(dummy_img)
-        text_width, text_height = draw.textsize(text, font=font)
+        bbox = draw.textbbox((0, 0), text, font=font)
+        text_width, text_height = bbox[2] - bbox[0], bbox[3] - bbox[1]
 
         # 创建白底图片
-        img = Image.new('RGB', (text_width + 20, text_height + 20), color='white')
+        img = Image.new("RGB", (text_width + 20, text_height + 20), color="white")
         draw = ImageDraw.Draw(img)
 
         # 绘制黑字
-        draw.text((10, 10), text, font=font, fill='black')
+        draw.text((10, 10), text, font=font, fill="black")
 
         # 将图片保存到内存中
         buffered = BytesIO()
@@ -100,6 +110,7 @@ def draw_text(text: str, font_size: int = 20, font_path: str = None) -> str:
     except Exception as e:
         logging.error(f"生成文本图片失败: {e}")
         return ""
+
 
 # 添加违禁词词库，传入违禁词和权值和群号
 def add_banword(word: str, weight: int, group_id: str = None) -> bool:
@@ -258,11 +269,16 @@ async def manager_command(websocket, raw_message, group_id, message_id):
             default_ban_words_list = "\n".join(
                 [f"{word}: {weight}" for word, weight in default_ban_words.items()]
             )
+            base64_default_ban_words_list = draw_text(default_ban_words_list)
+            # 拼接完整base64图片
+            base64_default_ban_words_list = (
+                f"[CQ:image,file=base64://{base64_default_ban_words_list}]"
+            )
             await send_group_msg(
                 websocket,
                 group_id,
                 f"[CQ:reply,id={message_id}]"
-                + f"默认违禁词列表:\n{default_ban_words_list}",
+                + f"默认违禁词列表:\n{base64_default_ban_words_list}",
             )
             return
 
@@ -273,11 +289,14 @@ async def manager_command(websocket, raw_message, group_id, message_id):
             ban_words_list = "\n".join(
                 [f"{word}: {weight}" for word, weight in ban_words.items()]
             )
-
+            base64_ban_words_list = draw_text(ban_words_list)
+            # 拼接完整base64图片
+            base64_ban_words_list = f"[CQ:image,file=base64://{base64_ban_words_list}]"
             await send_group_msg(
                 websocket,
                 group_id,
-                f"[CQ:reply,id={message_id}]" + f"分群违禁词列表:\n{ban_words_list}",
+                f"[CQ:reply,id={message_id}]"
+                + f"分群违禁词列表:\n{base64_ban_words_list}",
             )
             return
 
