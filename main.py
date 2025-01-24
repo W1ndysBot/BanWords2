@@ -410,9 +410,10 @@ async def check_banword(websocket, raw_message, group_id, message_id, user_id):
         report_message += f"原消息详情下条消息"
 
         # 上报到上报群
-        await send_group_msg(websocket, report_group_id, report_message)
-        await asyncio.sleep(0.1)
-        await send_group_msg(websocket, group_id, raw_message)
+        for group_id in report_group_ids:
+            await send_group_msg(websocket, group_id, report_message)
+            await asyncio.sleep(0.1)
+            await send_group_msg(websocket, group_id, raw_message)
 
 
 # 群消息处理函数
