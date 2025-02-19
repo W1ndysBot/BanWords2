@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+from app.api import send_group_msg
 
 # 数据存储路径，实际开发时，请将BanWords2替换为具体的数据存放路径
 DATA_DIR = os.path.join(
@@ -33,9 +34,7 @@ def get_ban_words(group_id):
         return []
 
 
-async def add_ban_word(
-    websocket, group_id, message_id, authorized, word, weight, send_group_msg
-):
+async def add_ban_word(websocket, group_id, message_id, authorized, word, weight):
     """
     添加违禁词
 
@@ -77,9 +76,7 @@ async def add_ban_word(
         )
 
 
-async def remove_ban_word(
-    websocket, group_id, message_id, authorized, word, send_group_msg
-):
+async def remove_ban_word(websocket, group_id, message_id, authorized, word):
     """
     删除违禁词
     group_id: 群号

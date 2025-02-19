@@ -93,7 +93,6 @@ async def handle_group_message(websocket, msg):
                     authorized,
                     add_ban_words_match.group(1),
                     add_ban_words_match.group(2),
-                    send_group_msg,
                 )
             elif remove_ban_words_match:
                 await remove_ban_word(
@@ -102,7 +101,6 @@ async def handle_group_message(websocket, msg):
                     message_id,
                     authorized,
                     remove_ban_words_match.group(1),
-                    send_group_msg,
                 )
             else:
                 # 检查用户发言权值和是否超过阈值
