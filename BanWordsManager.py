@@ -113,3 +113,19 @@ async def remove_ban_word(websocket, group_id, message_id, authorized, word):
             group_id,
             f"[CQ:reply,id={message_id}]❌❌❌删除违禁词失败: {str(e)}",
         )
+
+
+def get_default_ban_words():
+    """获取默认违禁词配置"""
+    try:
+        with open(os.path.join(DATA_DIR, "default.json"), "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        logging.warning("默认违禁词配置文件不存在")
+        return {}
+    except json.JSONDecodeError:
+        logging.error("默认违禁词配置文件格式错误")
+        return {}
+    except Exception as e:
+        logging.error(f"获取默认违禁词配置失败: {e}")
+        return {}
