@@ -65,7 +65,7 @@ async def add_ban_word(websocket, group_id, message_id, authorized, word, weight
         await send_group_msg(
             websocket,
             group_id,
-            f"[CQ:reply,id={message_id}]✅✅✅违禁词【{word}权值{weight}】已添加。",
+            f"[CQ:reply,id={message_id}]✅✅✅违禁词【{word}】权值【{weight}】已添加。",
         )
     except Exception as e:
         logging.error(f"添加违禁词失败: {e}")
