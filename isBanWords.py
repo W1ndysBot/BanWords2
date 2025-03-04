@@ -1,4 +1,5 @@
 import logging
+import re
 from app.scripts.BanWords2.BanWordsManager import get_ban_words, get_default_ban_words
 from app.api import set_group_ban, send_group_msg, send_private_msg, delete_msg
 from app.config import owner_id
@@ -18,11 +19,18 @@ async def is_ban_words(websocket, group_id, user_id, raw_message, message_id):
         ban_words = default_ban_words.copy()
         ban_words.update(group_ban_words)
 
-        for word in ban_words:
+        for word, weight in ban_words.items():
             try:
-                weight_value = int(ban_words[word])
-                if word in raw_message:
-                    all_weight += weight_value
+                weight_value = int(weight)
+                # 首先尝试正则表达式匹配
+                try:
+                    if re.search(word, raw_message):
+                        all_weight += weight_value
+                        continue
+                except re.error:
+                    # 如果正则表达式无效，退回到普通字符串匹配
+                    if word in raw_message:
+                        all_weight += weight_value
             except ValueError:
                 logging.warning(f"无效的权重值: {word}: {ban_words[word]}")
                 continue
