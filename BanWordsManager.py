@@ -23,15 +23,15 @@ def get_ban_words(group_id):
         ) as f:
             return json.load(f)
     except FileNotFoundError:
-        # 如果文件不存在,返回空列表
-        return []
+        # 如果文件不存在,返回空字典而不是空列表
+        return {}
     except json.JSONDecodeError:
-        # JSON解析错误,返回空列表
-        return []
+        # JSON解析错误,返回空字典
+        return {}
     except Exception as e:
-        # 其他异常,记录日志并返回空列表
+        # 其他异常,记录日志并返回空字典
         logging.error(f"获取违禁词列表失败: {e}")
-        return []
+        return {}
 
 
 async def add_ban_word(websocket, group_id, message_id, authorized, word, weight):

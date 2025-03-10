@@ -13,7 +13,11 @@ sys.path.append(
 from app.config import *
 from app.api import *
 from app.switch import load_switch, save_switch
-from app.scripts.BanWords2.BanWordsManager import add_ban_word, remove_ban_word
+from app.scripts.BanWords2.BanWordsManager import (
+    add_ban_word,
+    remove_ban_word,
+    get_ban_words,
+)
 from app.scripts.BanWords2.isBanWords import is_ban_words
 
 # 数据存储路径，实际开发时，请将BanWords2替换为具体的数据存放路径
@@ -85,7 +89,13 @@ async def handle_group_message(websocket, msg):
             # 其他群消息处理逻辑
             add_ban_words_match = re.search(r"bw2add(\S+) (\d+)", raw_message)
             remove_ban_words_match = re.search(r"bw2rm(\S+)", raw_message)
-            if add_ban_words_match:
+
+            # 添加查看违禁词列表命令处理
+            if raw_message == "bw2list":
+                await list_ban_words(
+                    websocket, group_id, user_id, message_id, authorized
+                )
+            elif add_ban_words_match:
                 await add_ban_word(
                     websocket,
                     group_id,
@@ -221,3 +231,57 @@ async def handle_events(websocket, msg):
                     msg.get("user_id"),
                     f"处理BanWords2{error_type}事件失败，错误信息：{str(e)}",
                 )
+
+
+# 添加查看违禁词列表功能
+async def list_ban_words(websocket, group_id, user_id, message_id, authorized):
+    """查看违禁词列表"""
+    if not authorized:
+        await send_group_msg(
+            websocket,
+            group_id,
+            f"[CQ:reply,id={message_id}]❌❌❌你没有权限查看违禁词列表,请联系管理员。",
+        )
+        return
+
+    try:
+        # 获取违禁词列表
+        ban_words = get_ban_words(group_id)
+
+        if not ban_words:
+            await send_group_msg(
+                websocket,
+                group_id,
+                f"[CQ:reply,id={message_id}]当前群组没有设置违禁词。",
+            )
+            return
+
+        # 在群里回复已发送私聊消息
+        await send_group_msg(
+            websocket,
+            group_id,
+            f"[CQ:reply,id={message_id}]✅✅✅违禁词列表已通过私聊发送给您，请查收。",
+        )
+
+        # 构建违禁词列表消息
+        message = f"群 {group_id} 的违禁词列表：\n"
+        message += "====================\n"
+        message += "违禁词 | 权重\n"
+        message += "--------------------\n"
+
+        for word, weight in ban_words.items():
+            message += f"{word} | {weight}\n"
+
+        message += "====================\n"
+        message += "共 {0} 个违禁词".format(len(ban_words))
+
+        # 通过私聊发送违禁词列表
+        await send_private_msg(websocket, user_id, message)
+
+    except Exception as e:
+        logging.error(f"查看违禁词列表失败: {e}")
+        await send_group_msg(
+            websocket,
+            group_id,
+            f"[CQ:reply,id={message_id}]❌❌❌查看违禁词列表失败: {str(e)}",
+        )
