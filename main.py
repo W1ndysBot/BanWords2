@@ -19,6 +19,7 @@ from app.scripts.BanWords2.BanWordsManager import (
     get_ban_words,
 )
 from app.scripts.BanWords2.isBanWords import is_ban_words
+from app.api import set_group_ban, set_group_kick
 
 # 数据存储路径，实际开发时，请将BanWords2替换为具体的数据存放路径
 DATA_DIR = os.path.join(
@@ -134,8 +135,39 @@ async def handle_private_message(websocket, msg):
     try:
         user_id = str(msg.get("user_id"))
         raw_message = str(msg.get("raw_message"))
-        # 私聊消息处理逻辑
-        pass
+
+        # 检查是否是管理员
+        authorized = user_id in owner_id
+        if not authorized:
+            return
+
+        # 处理解禁命令: unban群号 用户ID
+        unban_match = re.search(r"unban(\d+) (\d+)", raw_message)
+        if unban_match:
+            group_id = unban_match.group(1)
+            target_user_id = unban_match.group(2)
+            await handle_unban(websocket, group_id, target_user_id, user_id)
+            return
+
+        # 处理踢出命令: t群号 用户ID
+        kick_match = re.search(r"t(\d+) (\d+)", raw_message)
+        if kick_match:
+            group_id = kick_match.group(1)
+            target_user_id = kick_match.group(2)
+            await handle_kick(
+                websocket, group_id, target_user_id, user_id, reject_add_request=False
+            )
+            return
+
+        # 处理踢出并拉黑命令: tl群号 用户ID
+        kick_blacklist_match = re.search(r"tl(\d+) (\d+)", raw_message)
+        if kick_blacklist_match:
+            group_id = kick_blacklist_match.group(1)
+            target_user_id = kick_blacklist_match.group(2)
+            await handle_kick(
+                websocket, group_id, target_user_id, user_id, reject_add_request=True
+            )
+            return
     except Exception as e:
         logging.error(f"处理BanWords2私聊消息失败: {e}")
         await send_private_msg(
@@ -144,6 +176,52 @@ async def handle_private_message(websocket, msg):
             "处理BanWords2私聊消息失败，错误信息：" + str(e),
         )
         return
+
+
+# 处理解禁命令
+async def handle_unban(websocket, group_id, target_user_id, operator_id):
+    """处理解禁命令"""
+    try:
+        # 调用解禁API（设置禁言时间为0表示解除禁言）
+        await set_group_ban(websocket, group_id, target_user_id, 0)
+        # 通知操作者解禁成功
+        await send_private_msg(
+            websocket,
+            operator_id,
+            f"✅✅✅已解除群 {group_id} 中用户 {target_user_id} 的禁言。",
+        )
+    except Exception as e:
+        logging.error(f"处理解禁命令失败: {e}")
+        await send_private_msg(
+            websocket, operator_id, f"❌❌❌解除禁言失败，错误信息：{str(e)}"
+        )
+
+
+# 处理踢出命令
+async def handle_kick(
+    websocket, group_id, target_user_id, operator_id, reject_add_request=False
+):
+    """处理踢出命令，可选择是否拉黑"""
+    try:
+        # 调用踢出API
+        await set_group_kick(websocket, group_id, target_user_id, reject_add_request)
+
+        # 构建操作结果消息
+        operation_type = "踢出并拉黑" if reject_add_request else "踢出"
+        await send_private_msg(
+            websocket,
+            operator_id,
+            f"✅✅✅已{operation_type}群 {group_id} 中的用户 {target_user_id}。",
+        )
+    except Exception as e:
+        logging.error(f"处理踢出命令失败: {e}")
+        # 构建错误消息
+        operation_type = "踢出并拉黑" if reject_add_request else "踢出"
+        await send_private_msg(
+            websocket,
+            operator_id,
+            f"❌❌❌{operation_type}操作失败，错误信息：{str(e)}",
+        )
 
 
 # 群通知处理函数
@@ -175,6 +253,60 @@ async def handle_response(websocket, msg):
     if echo and echo.startswith("xxx"):
         # 回调处理逻辑
         pass
+
+
+# 添加查看违禁词列表功能
+async def list_ban_words(websocket, group_id, user_id, message_id, authorized):
+    """查看违禁词列表"""
+    if not authorized:
+        await send_group_msg(
+            websocket,
+            group_id,
+            f"[CQ:reply,id={message_id}]❌❌❌你没有权限查看违禁词列表,请联系管理员。",
+        )
+        return
+
+    try:
+        # 获取违禁词列表
+        ban_words = get_ban_words(group_id)
+
+        if not ban_words:
+            await send_group_msg(
+                websocket,
+                group_id,
+                f"[CQ:reply,id={message_id}]当前群组没有设置违禁词。",
+            )
+            return
+
+        # 在群里回复已发送私聊消息
+        await send_group_msg(
+            websocket,
+            group_id,
+            f"[CQ:reply,id={message_id}]✅✅✅违禁词列表已通过私聊发送给您，请查收。",
+        )
+
+        # 构建违禁词列表消息
+        message = f"群 {group_id} 的违禁词列表：\n"
+        message += "====================\n"
+        message += "违禁词 | 权重\n"
+        message += "--------------------\n"
+
+        for word, weight in ban_words.items():
+            message += f"{word} | {weight}\n"
+
+        message += "====================\n"
+        message += "共 {0} 个违禁词".format(len(ban_words))
+
+        # 通过私聊发送违禁词列表
+        await send_private_msg(websocket, user_id, message)
+
+    except Exception as e:
+        logging.error(f"查看违禁词列表失败: {e}")
+        await send_group_msg(
+            websocket,
+            group_id,
+            f"[CQ:reply,id={message_id}]❌❌❌查看违禁词列表失败: {str(e)}",
+        )
 
 
 # 统一事件处理入口
@@ -231,57 +363,3 @@ async def handle_events(websocket, msg):
                     msg.get("user_id"),
                     f"处理BanWords2{error_type}事件失败，错误信息：{str(e)}",
                 )
-
-
-# 添加查看违禁词列表功能
-async def list_ban_words(websocket, group_id, user_id, message_id, authorized):
-    """查看违禁词列表"""
-    if not authorized:
-        await send_group_msg(
-            websocket,
-            group_id,
-            f"[CQ:reply,id={message_id}]❌❌❌你没有权限查看违禁词列表,请联系管理员。",
-        )
-        return
-
-    try:
-        # 获取违禁词列表
-        ban_words = get_ban_words(group_id)
-
-        if not ban_words:
-            await send_group_msg(
-                websocket,
-                group_id,
-                f"[CQ:reply,id={message_id}]当前群组没有设置违禁词。",
-            )
-            return
-
-        # 在群里回复已发送私聊消息
-        await send_group_msg(
-            websocket,
-            group_id,
-            f"[CQ:reply,id={message_id}]✅✅✅违禁词列表已通过私聊发送给您，请查收。",
-        )
-
-        # 构建违禁词列表消息
-        message = f"群 {group_id} 的违禁词列表：\n"
-        message += "====================\n"
-        message += "违禁词 | 权重\n"
-        message += "--------------------\n"
-
-        for word, weight in ban_words.items():
-            message += f"{word} | {weight}\n"
-
-        message += "====================\n"
-        message += "共 {0} 个违禁词".format(len(ban_words))
-
-        # 通过私聊发送违禁词列表
-        await send_private_msg(websocket, user_id, message)
-
-    except Exception as e:
-        logging.error(f"查看违禁词列表失败: {e}")
-        await send_group_msg(
-            websocket,
-            group_id,
-            f"[CQ:reply,id={message_id}]❌❌❌查看违禁词列表失败: {str(e)}",
-        )
