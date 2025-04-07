@@ -274,7 +274,7 @@ async def process_group_msg_history(websocket, msg):
                                 # 撤回消息
                                 await delete_msg(websocket, message_id)
                                 logging.info(
-                                    f"[扫描历史消息]已撤回用户 {user_id} 在群 {group_id} 的消息: {message_id}"
+                                    f"[BanWords2][扫描历史记录]已撤回用户 {user_id} 在群 {group_id} 的消息: {message_id}"
                                 )
                             except Exception as e:
                                 logging.error(f"撤回消息失败: {e}")
