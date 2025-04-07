@@ -39,7 +39,9 @@ async def is_ban_words(websocket, group_id, user_id, raw_message, message_id):
             await delete_msg(websocket, message_id)
             await set_group_ban(websocket, group_id, user_id, 60 * 10)
             # 查询十条历史记录
-            await get_group_msg_history(websocket, group_id, 10, user_id, "isBanWords")
+            await get_group_msg_history(
+                websocket, group_id, 10, user_id, note="isBanWords"
+            )
             await send_private_msg(
                 websocket,
                 owner_id[0],
