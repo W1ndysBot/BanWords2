@@ -252,21 +252,21 @@ async def process_group_msg_history(websocket, msg):
     echo = msg.get("echo")
     if echo and echo.startswith("get_group_msg_history_"):
         # 解析群号，用户ID，备注
-        parts = echo.split("_")
-        if len(parts) >= 4:
-            group_id = parts[1]
-            user_id = parts[2]
-            note = parts[3]
+        parts = echo.replace("get_group_msg_history_", "").split("_")
+        if len(parts) >= 3:
+            group_id = parts[0]
+            user_id = parts[1]
+            note = parts[2]
             if note == "isBanWords":
                 # 获取历史消息列表
-                message_list = msg.get("data", {}).get("message", [])
+                message_list = msg.get("data", {}).get("messages", [])
                 if not message_list:
                     logging.warning(f"未找到群 {group_id} 的历史消息")
                     return
 
                 # 遍历消息列表，查找指定用户ID的消息并撤回
                 for message in message_list:
-                    if str(message.get("sender", {}).get("user_id")) == user_id:
+                    if str(message.get("user_id")) == user_id:
                         # 获取消息ID
                         message_id = message.get("message_id")
                         if message_id:
