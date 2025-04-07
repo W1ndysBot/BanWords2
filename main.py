@@ -246,13 +246,47 @@ async def handle_group_notice(websocket, msg):
         return
 
 
+# 处理群历史消息
+async def process_group_msg_history(websocket, msg):
+    """处理群历史消息"""
+    echo = msg.get("echo")
+    if echo and echo.startswith("get_group_msg_history_"):
+        # 解析群号，用户ID，备注
+        parts = echo.split("_")
+        if len(parts) >= 4:
+            group_id = parts[1]
+            user_id = parts[2]
+            note = parts[3]
+            if note == "isBanWords":
+                # 获取历史消息列表
+                message_list = msg.get("data", {}).get("message", [])
+                if not message_list:
+                    logging.warning(f"未找到群 {group_id} 的历史消息")
+                    return
+
+                # 遍历消息列表，查找指定用户ID的消息并撤回
+                for message in message_list:
+                    if str(message.get("sender", {}).get("user_id")) == user_id:
+                        # 获取消息ID
+                        message_id = message.get("message_id")
+                        if message_id:
+                            try:
+                                # 撤回消息
+                                await delete_msg(websocket, message_id)
+                                logging.info(
+                                    f"已撤回用户 {user_id} 在群 {group_id} 的消息: {message_id}"
+                                )
+                            except Exception as e:
+                                logging.error(f"撤回消息失败: {e}")
+
+
 # 回应事件处理函数
 async def handle_response(websocket, msg):
     """处理回调事件"""
     echo = msg.get("echo")
-    if echo and echo.startswith("xxx"):
+    if echo and echo.startswith("get_group_msg_history_"):
         # 回调处理逻辑
-        pass
+        await process_group_msg_history(websocket, msg)
 
 
 # 添加查看违禁词列表功能

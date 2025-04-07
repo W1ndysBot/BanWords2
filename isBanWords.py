@@ -1,7 +1,7 @@
 import logging
 import re
 from app.scripts.BanWords2.BanWordsManager import get_ban_words, get_default_ban_words
-from app.api import set_group_ban, send_private_msg, delete_msg
+from app.api import set_group_ban, send_private_msg, delete_msg, get_group_msg_history
 from app.config import owner_id
 from datetime import datetime
 import asyncio
@@ -38,6 +38,8 @@ async def is_ban_words(websocket, group_id, user_id, raw_message, message_id):
         if all_weight > 10:
             await delete_msg(websocket, message_id)
             await set_group_ban(websocket, group_id, user_id, 60 * 10)
+            # 查询十条历史记录
+            await get_group_msg_history(websocket, group_id, 10, user_id, "isBanWords")
             await send_private_msg(
                 websocket,
                 owner_id[0],
