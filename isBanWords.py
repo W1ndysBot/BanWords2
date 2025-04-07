@@ -5,6 +5,7 @@ from app.api import set_group_ban, send_private_msg, delete_msg, get_group_msg_h
 from app.config import owner_id
 from datetime import datetime
 import asyncio
+import base64
 
 
 async def is_ban_words(websocket, group_id, user_id, raw_message, message_id):
@@ -19,6 +20,9 @@ async def is_ban_words(websocket, group_id, user_id, raw_message, message_id):
         ban_words = default_ban_words.copy()
         ban_words.update(group_ban_words)
 
+        # 记录触发的违禁词列表
+        triggered_words = []
+
         for word, weight in ban_words.items():
             try:
                 weight_value = int(weight)
@@ -26,11 +30,13 @@ async def is_ban_words(websocket, group_id, user_id, raw_message, message_id):
                 try:
                     if re.search(word, raw_message):
                         all_weight += weight_value
+                        triggered_words.append(f"{word}({weight_value})")
                         continue
                 except re.error:
                     # 如果正则表达式无效，退回到普通字符串匹配
                     if word in raw_message:
                         all_weight += weight_value
+                        triggered_words.append(f"{word}({weight_value})")
             except ValueError:
                 logging.warning(f"无效的权重值: {word}: {ban_words[word]}")
                 continue
@@ -48,10 +54,16 @@ async def is_ban_words(websocket, group_id, user_id, raw_message, message_id):
                 f"时间：{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
                 f"群号：{group_id}\n"
                 f"用户：{user_id}\n"
-                f"发送的消息超过了阈值，已自动禁言，原始消息如下",
+                f"触发的违禁词列表：{', '.join(triggered_words)}\n"
+                f"总权重：{all_weight}\n"
+                f"发送的消息超过了阈值，已自动禁言，原始消息base64编码如下",
             )
             await asyncio.sleep(0.5)
-            await send_private_msg(websocket, owner_id[0], raw_message)
+
+            encoded_message = base64.b64encode(raw_message.encode("utf-8")).decode(
+                "utf-8"
+            )
+            await send_private_msg(websocket, owner_id[0], encoded_message)
             await send_private_msg(
                 websocket,
                 owner_id[0],
