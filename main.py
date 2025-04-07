@@ -190,6 +190,12 @@ async def handle_unban(websocket, group_id, target_user_id, operator_id):
             operator_id,
             f"✅✅✅已解除群 {group_id} 中用户 {target_user_id} 的禁言。",
         )
+        # 群内通知
+        await send_group_msg(
+            websocket,
+            group_id,
+            f"[CQ:at,qq={target_user_id}]管理员已解除群 {group_id} 中用户 {target_user_id} 的禁言。",
+        )
     except Exception as e:
         logging.error(f"处理解禁命令失败: {e}")
         await send_private_msg(
@@ -212,6 +218,12 @@ async def handle_kick(
             websocket,
             operator_id,
             f"✅✅✅已{operation_type}群 {group_id} 中的用户 {target_user_id}。",
+        )
+        # 群内通知
+        await send_group_msg(
+            websocket,
+            group_id,
+            f"[CQ:at,qq={target_user_id}]管理员已{operation_type}群 {group_id} 中的用户 {target_user_id}。",
         )
     except Exception as e:
         logging.error(f"处理踢出命令失败: {e}")
