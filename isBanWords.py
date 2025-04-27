@@ -71,14 +71,6 @@ async def is_ban_words(websocket, group_id, user_id, raw_message, message_id):
                 "utf-8"
             )
             await send_private_msg(websocket, owner_id[0], encoded_message)
-            await send_private_msg(
-                websocket,
-                owner_id[0],
-                f"快捷操作命令：\n"
-                f"解禁：unban{group_id} {user_id}\n"
-                f"踢出：t{group_id} {user_id}\n"
-                f"踢出并拉黑：tl{group_id} {user_id}\n",
-            )
             await asyncio.sleep(0.5)
             await send_private_msg(websocket, owner_id[0], f"unban{group_id} {user_id}")
             await send_private_msg(websocket, owner_id[0], f"t{group_id} {user_id}")
