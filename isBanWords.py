@@ -13,10 +13,12 @@ async def is_ban_words(websocket, group_id, user_id, raw_message, message_id):
     try:
 
         # 预处理
+        # 删除空格
         raw_message = raw_message.replace(" ", "")
+        # 删除换行符
         raw_message = raw_message.replace("\n", "")
-        # 删除标点
-        raw_message = re.sub(r"[^\w\s]", "", raw_message)
+        # 删除中文标点
+        raw_message = re.sub(r"[，。！？；：" "''【】（）、《》]", "", raw_message)
 
         all_weight = 0
         # 获取默认违禁词和群组特定违禁词
