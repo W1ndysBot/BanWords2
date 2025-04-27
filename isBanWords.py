@@ -11,6 +11,13 @@ import base64
 async def is_ban_words(websocket, group_id, user_id, raw_message, message_id):
     """检查用户发言权值和是否超过阈值，包含默认违禁词和群组特定违禁词"""
     try:
+
+        # 预处理
+        raw_message = raw_message.replace(" ", "")
+        raw_message = raw_message.replace("\n", "")
+        # 删除标点
+        raw_message = re.sub(r"[^\w\s]", "", raw_message)
+
         all_weight = 0
         # 获取默认违禁词和群组特定违禁词
         default_ban_words = get_default_ban_words()
